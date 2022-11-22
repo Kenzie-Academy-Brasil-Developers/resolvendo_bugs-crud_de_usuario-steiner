@@ -1,62 +1,75 @@
 import express from "express";
+import { v4 as uuidV4 } from "uuid";
+import { users } from "./database";
 
 const app = express();
+app.use(express.json());
+const PORT = 3000;
 
 // Services
-const createUserService = (email, name, birthDate) => {
+const createUserService = (dataUser) => {
+  const { email, name, birthDate } = dataUser;
   const userArealdyExists = users.find((user) => user.email === email);
 
   if (userArealdyExists) {
-    return "This email address is already being used";
+    const error = { message: "This email address is already being user" };
+    return [409, error];
   }
 
   const newUser = {
+    uuid: uuidV4(),
     email,
     name,
     birthDate,
   };
 
   users.push(newUser);
+
+  return [201, newUser];
 };
 
 const listUsersService = () => {
-  return users;
+  return [201, users];
 };
 
-// Controllers
-const createUserController = (request, response) => {
-  const { email, name, birthDate } = request.body;
+const deleteUserService = (uuid) => {
+  const userIndex = users.findIndex((user) => user.uuid === uuid);
 
-  const user = createUserService(email, name);
-
-  return response.send(user);
-};
-
-const listUsersController = (request, response) => {
-  const usersList = listUsersService();
-
-  return response.json(users);
-};
-
-const deleteUserController = (request, response) => {
-  const { id } = request.body;
-
-  const userIndex = users.findIndex((element) => element.id === id);
-
-  if (userIndex === -1) {
-    return response.status(404).json("User not found");
+  if (userIndex < 0) {
+    const error = { message: "User not found" };
+    return [404, error];
   }
 
   users.splice(userIndex, 1);
 
-  return response.json("Usuário excluido");
+  return [200];
 };
 
-export default deleteUserController;
+// Controllers
+const createUserController = (request, response) => {
+  const dataUser = request.body;
 
-express.post("", createUserController);
-express.get("", listUsersController);
-express.delete("/id", deleteUserController);
+  const [status, data] = createUserService(dataUser);
+  return response.status(status).json(data);
+};
+
+const listUsersController = (request, response) => {
+  const [status, listUsers] = listUsersService();
+
+  return response.json(listUsers);
+};
+
+const deleteUserController = (request, response) => {
+  const { uuid } = request.params;
+
+  const [status, data] = deleteUserService(uuid);
+
+  return response.status(status).json(data);
+};
+
+app.post("/register", createUserController);
+app.get("/users", listUsersController);
+app.delete(`/user/:uuid`, deleteUserController);
 
 app.listen(PORT, () =>
   console.log(`App is running on http://localhost:${PORT}`)
