@@ -45,6 +45,25 @@ const deleteUserService = (uuid) => {
   return [200];
 };
 
+const updateUserService = (uuid, body) => {
+  const user = users.find((user) => user.uuid === uuid);
+
+  if (!user) {
+    const error = { message: "User not found" };
+    return [404, error];
+  }
+
+  const updateUser = {
+    ...user,
+    ...body,
+  };
+
+  const userIndex = users.indexOf((user) => user.uuid === uuid);
+  users.splice(userIndex, 1, updateUser);
+
+  return [200, updateUser];
+};
+
 // Controllers
 const createUserController = (request, response) => {
   const dataUser = request.body;
@@ -67,9 +86,19 @@ const deleteUserController = (request, response) => {
   return response.status(status).json(data);
 };
 
+const updateUserController = (request, response) => {
+  const { uuid } = request.params;
+  const { body } = request;
+
+  const [status, data] = updateUserService(uuid, body);
+
+  return response.status(status).json(data);
+};
+
 app.post("/register", createUserController);
 app.get("/users", listUsersController);
 app.delete(`/user/:uuid`, deleteUserController);
+app.patch(`/user/:uuid`, updateUserController);
 
 app.listen(PORT, () =>
   console.log(`App is running on http://localhost:${PORT}`)
